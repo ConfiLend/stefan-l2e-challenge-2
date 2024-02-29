@@ -239,7 +239,7 @@ describe('SpyMaster', () => {
   })
 
   it('Generates proof for a bunch of messages at once', async () => {
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 50; i++) {
       let message = Message.getRandomMessage(Field(3 + i));
 
       // calculate the new SpyMasterState
@@ -261,7 +261,7 @@ describe('SpyMaster', () => {
 
     // make sure that the value is correctly updated
     const maxMessageNumber = await spyMaster.maxMessageNumber.get();
-    maxMessageNumber.assertEquals(Field(8));
+    maxMessageNumber.assertEquals(Field(52));
   })
 
 });
