@@ -7,21 +7,10 @@ import {
   SelfProof,
   method,
   state,
-  State
+  State,
+  Permissions,
 } from 'o1js';
 import { Message } from "./Message"
-
-export class SpyMaster extends SmartContract {
-  @state(Field) maxMessageNumber = State<Field>();
-
-  @method verify(proof: SelfProof<SpyMasterState, Field>) {
-    proof.verify()
-    const localMaxMessageNumber = this.maxMessageNumber.getAndRequireEquals();
-    localMaxMessageNumber.assertLessThanOrEqual(proof.publicOutput);
-    this.maxMessageNumber.set(proof.publicOutput);
-  }
-
-}
 
 export class SpyMasterState extends Struct({
   MaxMessageNumber: Field
@@ -85,3 +74,37 @@ export const BatchProcessor = ZkProgram({
 
   }
 })
+
+export let BatchProcessorProof_ = ZkProgram.Proof(BatchProcessor);
+export class BatchProcessorProof extends BatchProcessorProof_ { }
+
+export class SpyMaster extends SmartContract {
+  @state(Field) maxMessageNumber = State<Field>();
+
+  deploy() {
+    super.deploy();
+    this.account.permissions.set({
+      ...Permissions.default(),
+      editState: Permissions.proofOrSignature(),
+    });
+  }
+
+  @method initState() {
+    super.init()
+    this.maxMessageNumber.set(Field(0));
+  }
+
+  @method update(proof: BatchProcessorProof) {
+    proof.verify();
+    const currentMaxMessageNumber = this.maxMessageNumber.getAndRequireEquals();
+    const maxMessageNumber = proof.publicOutput;
+
+    const newMax = Provable.if(currentMaxMessageNumber.greaterThan(maxMessageNumber),
+      currentMaxMessageNumber,
+      maxMessageNumber
+    )
+
+    this.maxMessageNumber.set(newMax);
+  }
+
+}
